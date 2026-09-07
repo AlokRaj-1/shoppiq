@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>RetailEdge AI — On-Device Retail Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+:root{
+ --bg:#05080e; --panel:#0c1322; --panel2:#101a2e; --line:#1a2740; --line2:#243556;
+ --txt:#e7eefb; --mut:#8ea2c4; --mut2:#5b6c8c;
+ --cyan:#22d3ee; --green:#34d399; --amber:#fbbf24; --red:#f87171; --violet:#a78bfa; --blue:#60a5fa; --pink:#f472b6;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:radial-gradient(1200px 600px at 85% -10%,rgba(34,211,238,.09),transparent 60%),radial-gradient(900px 500px at 5% 0%,rgba(167,139,250,.08),transparent 55%),var(--bg);color:var(--txt);font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.5}
+.mono{font-family:'JetBrains Mono',monospace}
+.wrap{max-width:1460px;margin:0 auto;padding:0 22px}
+/* topbar */
+.topbar{position:sticky;top:0;z-index:50;background:rgba(5,8,14,.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar .wrap{display:flex;align-items:center;gap:14px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;letter-spacing:.2px}
+.brand .dot{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),var(--violet));display:grid;place-items:center;font-size:13px;color:#04121a}
+.brand small{color:var(--mut);font-weight:600}
+.topright{margin-left:auto;display:flex;align-items:center;gap:12px}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.4px;border:1px solid var(--line2);background:var(--panel)}
+.pill .b{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s infinite}
+@keyframes blink{50%{opacity:.4}}
+.pill.edge{color:var(--green);border-color:rgba(52,211,153,.35)}
+.pill.off{color:var(--amber);border-color:rgba(251,191,36,.4)}
+.pill.off .b{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.clock{color:var(--mut);font-size:12.5px}
+.switch{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--mut);font-weight:600;cursor:pointer;user-select:none}
+.sw{width:36px;height:20px;border-radius:999px;background:var(--panel2);border:1px solid var(--line2);position:relative;transition:.2s}
+.sw::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--mut);transition:.2s}
+.switch input{display:none}
+.switch input:checked + .sw{background:rgba(251,191,36,.25);border-color:var(--amber)}
+.switch input:checked + .sw::after{left:18px;background:var(--amber)}
+/* offline banner */
+#offlineBanner{display:none;background:linear-gradient(90deg,rgba(251,191,36,.14),rgba(251,191,36,.05));border-bottom:1px solid rgba(251,191,36,.3);color:var(--amber);font-size:12.5px;font-weight:600;padding:8px 0;text-align:center}
+body.offline #offlineBanner{display:block}
+/* hero */
+.hero{padding:52px 0 26px;text-align:center}
+.hero .tag{display:inline-block;padding:5px 14px;border-radius:999px;border:1px solid rgba(34,211,238,.35);color:var(--cyan);font-size:11.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:16px;background:rgba(34,211,238,.06)}
+.hero h1{font-size:clamp(30px,4.6vw,52px);font-weight:800;letter-spacing:-1px;line-height:1.08}
+.hero h1 span{background:linear-gradient(90deg,var(--cyan),var(--green) 55%,var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{max-width:760px;margin:14px auto 0;color:var(--mut);font-size:15.5px}
+.chips{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:22px}
+.chip{padding:7px 14px;border-radius:10px;background:var(--panel);border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--mut)}
+.chip b{color:var(--txt)}
+/* sections */
+section{padding:26px 0}
+.sechead{display:flex;align-items:baseline;gap:12px;margin-bottom:18px}
+.sechead h2{font-size:21px;font-weight:800;letter-spacing:-.3px}
+.sechead span{color:var(--mut2);font-size:12.5px;font-weight:600}
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.kpi{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:14px 16px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--cyan));opacity:.7}
+.kpi .lab{font-size:10.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--mut)}
+.kpi .val{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-top:5px}
+.kpi .sub{font-size:11px;color:var(--mut2);margin-top:3px;font-weight:600}
+.kpi .sub b{color:var(--green)}
+/* panels & tabs */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+.panel h3{font-size:13px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+.panel h3 .ico{font-size:14px}
+.panel h3 .rhs{margin-left:auto;font-size:11px;color:var(--mut2);font-weight:600}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 14px}
+.tabbtn{padding:8px 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--mut);font-weight:700;font-size:12.5px;cursor:pointer;transition:.15s;font-family:Inter}
+.tabbtn:hover{color:var(--txt);border-color:var(--line2)}
+.tabbtn.active{background:linear-gradient(135deg,rgba(34,211,238,.18),rgba(167,139,250,.14));color:var(--cyan);border-color:rgba(34,211,238,.45)}
+.tabpane{display:none}
+.tabpane.active{display:block;animation:fade .3s}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}}
+.grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:14px}
+.grid2e{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.mt{margin-top:14px}
+.canvasbox{position:relative;background:#070b13;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:10px}
+.canvasbox canvas{display:block;width:100%;height:auto}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--mut);font-weight:600}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+/* alerts */
+.feed{margin-top:10px;max-height:560px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+.feed::-webkit-scrollbar{width:6px}.feed::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+.al{display:flex;gap:10px;padding:9px 11px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--ac,var(--cyan));font-size:12px;animation:fade .3s}
+.al .t{color:var(--mut2);font-family:'JetBrains Mono',monospace;font-size:10.5px;white-space:nowrap;padding-top:1px}
+.al b{display:block;font-size:12px}
+.al span{color:var(--mut);font-size:11.5px}
+/* shelf */
+.shelfgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+.sku{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.sku .nm{font-weight:700;font-size:12.5px;display:flex;justify-content:space-between;gap:6px}
+.sku .sh{font-size:10px;color:var(--mut2);font-family:'JetBrains Mono',monospace;font-weight:700}
+.skbar{height:7px;border-radius:99px;background:#0a1220;margin:10px 0 6px;overflow:hidden;border:1px solid var(--line)}
+.skbar i{display:block;height:100%;border-radius:99px;transition:width .6s}
+.sku .meta{display:flex;justify-content:space-between;font-size:10.5px;color:var(--mut);font-weight:600}
+.st{padding:2px 8px;border-radius:99px;font-size:9.5px;font-weight:800;letter-spacing:.5px}
+.st.ok{background:rgba(52,211,153,.14);color:var(--green)}
+.st.low{background:rgba(251,191,36,.14);color:var(--amber)}
+.st.crit{background:rgba(248,113,113,.16);color:var(--red)}
+.plano{font-size:10px;font-weight:700}
+.plano.y{color:var(--green)}.plano.n{color:var(--red)}
+.task{display:flex;gap:10px;align-items:center;padding:9px 11px;background:var(--panel2);border:1px solid rgba(251,191,36,.25);border-radius:10px;font-size:12px;margin-top:8px}
+.task .eta{margin-left:auto;font-family:'JetBrains Mono',monospace;color:var(--amber);font-size:11px;font-weight:700}
+/* queue */
+.counters{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+.counter{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px}
+.counter.closed{opacity:.55}
+.counter .hd{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:13px}
+.qppl{display:flex;gap:4px;flex-wrap:wrap;margin:11px 0;min-height:22px}
+.qp{width:11px;height:16px;border-radius:5px 5px 3px 3px;background:linear-gradient(180deg,var(--cyan),#0e7490);position:relative}
+.qp::before{content:'';position:absolute;top:-4px;left:2.5px;width:6px;height:6px;border-radius:50%;background:var(--cyan)}
+.qp.more{background:none;color:var(--mut);font-size:10px;width:auto;font-weight:700}
+.qp.more::before{display:none}
+.counter .row{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);font-weight:600;margin-top:4px}
+.counter .row b{color:var(--txt);font-family:'JetBrains Mono',monospace}
+#queueBanner{display:none;align-items:center;gap:12px;margin-top:12px;padding:12px 16px;border-radius:12px;background:linear-gradient(90deg,rgba(248,113,113,.16),rgba(251,191,36,.08));border:1px solid rgba(248,113,113,.4);font-size:13px;font-weight:600}
+#queueBanner.show{display:flex;animation:fade .3s}
+#queueBanner button{margin-left:auto;padding:8px 16px;border-radius:9px;border:none;background:var(--green);color:#052e1f;font-weight:800;font-size:12px;cursor:pointer;font-family:Inter}
+#queueBanner button:hover{filter:brightness(1.1)}
+/* devices */
+.devrow{display:grid;grid-template-columns:110px 1.2fr 90px 90px 1fr 80px 90px;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);font-size:12px}
+.devrow.hd{color:var(--mut2);font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(--line2)}
+.devrow .mono{font-size:11.5px}
+.npubar{height:6px;background:#0a1220;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+.npubar i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--violet))}
+.on{color:var(--green);font-weight:700;font-size:11px}
+/* privacy */
+.badges{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+.badge{padding:8px 13px;border-radius:10px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);color:var(--green);font-size:11.5px;font-weight:700}
+.badge.c{background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.3);color:var(--cyan)}
+.badge.v{background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.3);color:var(--violet)}
+.bigstats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.bstat{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px;text-align:center}
+.bstat .v{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--cyan)}
+.bstat .l{font-size:10.5px;color:var(--mut);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:4px}
+/* architecture */
+.arch{display:grid;grid-template-columns:1fr 34px 1.25fr 34px 1fr 34px 1fr;gap:0;align-items:stretch;margin-top:14px}
+.astep{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.astep .n{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);font-weight:700;letter-spacing:1px}
+.astep h4{font-size:14px;font-weight:800;margin:5px 0 9px}
+.astep ul{list-style:none}
+.astep li{font-size:11.5px;color:var(--mut);padding:3px 0 3px 16px;position:relative;font-weight:500}
+.astep li::before{content:'▸';position:absolute;left:0;color:var(--cyan)}
+.astep li b{color:var(--txt)}
+.arrow{display:grid;place-items:center;color:var(--cyan);font-size:18px;font-weight:800}
+/* pillars */
+.pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+.pil{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.pil .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px;margin-bottom:10px;background:linear-gradient(135deg,rgba(34,211,238,.2),rgba(167,139,250,.15));border:1px solid var(--line2)}
+.pil h4{font-size:13.5px;font-weight:800;margin-bottom:6px}
+.pil p{font-size:11.5px;color:var(--mut)}
+/* impact */
+.impact{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+.imp{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:20px;text-align:center}
+.imp .v{font-size:30px;font-weight:800;font-family:'JetBrains Mono',monospace;background:linear-gradient(90deg,var(--cyan),var(--green));-webkit-background-clip:text;background-clip:text;color:transparent}
+.imp .l{font-size:12px;color:var(--mut);font-weight:600;margin-top:6px}
+footer{border-top:1px solid var(--line);padding:26px 0 40px;margin-top:20px;color:var(--mut2);font-size:12px;text-align:center}
+footer b{color:var(--mut)}
+.note{font-size:10.5px;color:var(--mut2);margin-top:8px;font-style:italic}
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}.shelfgrid,.counters,.pillars,.impact{grid-template-columns:repeat(2,1fr)}.grid2,.grid2e,.grid3{grid-template-columns:1fr}.arch{grid-template-columns:1fr}.arrow{transform:rotate(90deg);padding:4px}.devrow{grid-template-columns:90px 1fr 70px 70px 1fr 70px;font-size:11px}.devrow :nth-child(7){display:none}}
+@media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}.shelfgrid,.counters{grid-template-columns:1fr}.topbar .clock{display:none}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+ <div class="wrap">
+  <div class="brand"><div class="dot">◈</div>RetailEdge&nbsp;AI <small>/ store-ops console</small></div>
+  <div class="topright">
+   <span class="clock mono" id="clock">—</span>
+   <span class="pill edge" id="edgePill"><span class="b"></span><span id="edgePillTxt">EDGE MODE · CLOUD SYNCED</span></span>
+   <label class="switch"><input type="checkbox" id="offlineToggle"><span class="sw"></span>Simulate network outage</label>
+  </div>
+ </div>
+</div>
+<div id="offlineBanner">⚡ CONNECTIVITY LOST — all AI inference continues on-device (Hexagon™ NPU). Zero frames leave the store. Events buffered locally, will sync on reconnect.</div>
+
+<header class="hero wrap">
+ <div class="tag">Qualcomm Edge AI · On-Device Retail Intelligence</div>
+ <h1>The store that <span>sees, thinks &amp; acts</span><br>— entirely at the edge.</h1>
+ <p>RetailEdge AI turns existing cameras into real-time shopper analytics, shelf vision and queue intelligence. Every model runs locally on Qualcomm® Hexagon™ NPUs — no cloud required, no PII ever stored.</p>
+ <div class="chips">
+  <div class="chip">⚡ <b>&lt;10 ms</b> on-device inference</div>
+  <div class="chip">📡 <b>100%</b> offline-capable</div>
+  <div class="chip">🔒 <b>0</b> PII / video stored</div>
+  <div class="chip">🧠 INT8 on <b>Hexagon™ NPU</b> via QNN</div>
+  <div class="chip">📉 <b>−99.9%</b> cloud bandwidth</div>
+ </div>
+</header>
+
+<main class="wrap">
+
+<!-- ============ DASHBOARD ============ -->
+<section id="dash">
+ <div class="sechead"><h2>Live Store Operations</h2><span>Store #042 · Bengaluru · simulated live data · all metrics computed on-device</span></div>
+
+ <div class="kpis">
+  <div class="kpi" style="--ac:var(--cyan)"><div class="lab">Footfall today</div><div class="val" id="kFoot">0</div><div class="sub"><b>▲ 8.4%</b> vs yesterday</div></div>
+  <div class="kpi" style="--ac:var(--green)"><div class="lab">In store now</div><div class="val" id="kStore">0</div><div class="sub">live occupancy</div></div>
+  <div class="kpi" style="--ac:var(--violet)"><div class="lab">Avg dwell</div><div class="val" id="kDwell">0:00</div><div class="sub">per shopper</div></div>
+  <div class="kpi" style="--ac:var(--red)"><div class="lab">Stock alerts</div><div class="val" id="kStock">0</div><div class="sub">low / out-of-stock</div></div>
+  <div class="kpi" style="--ac:var(--amber)"><div class="lab">Avg wait</div><div class="val" id="kWait">0:00</div><div class="sub">checkout queue</div></div>
+  <div class="kpi" style="--ac:var(--blue)"><div class="lab">Edge latency</div><div class="val" id="kLat">0 ms</div><div class="sub">NPU inference / frame</div></div>
+ </div>
+
+ <div class="tabs">
+  <button class="tabbtn active" data-tab="overview">⬢ Overview</button>
+  <button class="tabbtn" data-tab="shopper">🚶 Shopper Analytics</button>
+  <button class="tabbtn" data-tab="inventory">📦 Inventory Vision</button>
+  <button class="tabbtn" data-tab="queue">🧾 Queue Intelligence</button>
+  <button class="tabbtn" data-tab="edge">⚙ Edge &amp; Privacy</button>
+ </div>
+
+ <!-- OVERVIEW -->
+ <div class="tabpane active" id="tab-overview">
+  <div class="grid2">
+   <div class="panel"><h3><span class="ico">🎥</span> On-Device AI Vision — CAM-02 · Sales Floor <span class="rhs" id="hudFps">30 FPS · HTP</span></h3>
+    <div class="canvasbox"><canvas id="visionCanvas" width="1000" height="620"></canvas></div>
+    <div class="legend"><span><i style="background:var(--cyan)"></i>Anonymous track (ByteTrack ID)</span><span><i style="background:var(--red)"></i>Entry tripwire</span><span>🔒 faces blurred on-chip · video never stored</span></div>
+   </div>
+   <div class="panel"><h3><span class="ico">🗺</span> Movement Heatmap — today <span class="rhs">live accumulation</span></h3>
+    <div class="canvasbox"><canvas id="heatCanvas" width="1000" height="620"></canvas></div>
+    <div class="legend"><span><i style="background:linear-gradient(90deg,#1d4ed8,#22d3ee,#34d399,#fbbf24,#ef4444)"></i></span>low → high traffic density</div>
+   </div>
+  </div>
+  <div class="grid2 mt">
+   <div class="panel"><h3><span class="ico">📈</span> Footfall by hour <span class="rhs">entries / hour · IST</span></h3>
+    <div style="height:240px;margin-top:10px"><canvas id="footChart"></canvas></div>
+   </div>
+   <div class="panel"><h3><span class="ico">🚨</span> Real-time alert stream <span class="rhs">stock-outs · queues · planogram</span></h3>
+    <div class="feed" id="alertFeed"></div>
+   </div>
+  </div>
+ </div>
+
+ <!-- SHOPPER -->
+ <div class="tabpane" id="tab-shopper">
+  <div class="grid3">
+   <div class="kpi" style="--ac:var(--cyan)"><div class="lab">Entries today</div><div class="val" id="entriesVal">0</div><div class="sub">tripwire IN events</div></div>
+   <div class="kpi" style="--ac:var(--mut)"><div class="lab">Exits today</div><div class="val" id="exitsVal">0</div><div class="sub">tripwire OUT events</div></div>
+   <div class="kpi" style="--ac:var(--green)"><div class="lab">Conversion proxy</div><div class="val" id="convVal">0%</div><div class="sub">billed ÷ footfall (POS join)</div></div>
+  </div>
+  <div class="grid2e mt">
+   <div class="panel"><h3><span class="ico">⏱</span> Avg dwell time by zone</h3>
+    <div style="height:260px;margin-top:10px"><canvas id="dwellChart"></canvas></div>
+   </div>
+   <div class="panel"><h3><span class="ico">📊</span> Zone engagement <span class="rhs">unique visitors · avg dwell</span></h3>
+    <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:12px">
+     <thead><tr style="color:var(--mut2);font-size:10px;text-transform:uppercase;letter-spacing:.7px"><th align="left" style="padding:7px 8px">Zone</th><th align="right" style="padding:7px 8px">Visitors</th><th align="right" style="padding:7px 8px">Avg dwell</th><th align="left" style="padding:7px 8px;width:34%">Share</th></tr></thead>
+     <tbody id="zoneRows"></tbody>
+    </table>
+   </div>
+  </div>
+ </div>
+
+ <!-- INVENTORY -->
+ <div class="tabpane" id="tab-inventory">
+  <div class="grid2">
+   <div class="panel"><h3><span class="ico">🏬</span> Shelf vision — SKU stock levels <span class="rhs">shelf cams · SKU detector INT8</span></h3>
+    <div class="shelfgrid" id="shelfGrid"></div>
+   </div>
+   <div>
+    <div class="panel"><h3><span class="ico">📐</span> Planogram compliance</h3>
+     <div style="height:170px;margin-top:8px;position:relative"><canvas id="planoChart"></canvas>
+      <div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none"><div style="text-align:center"><div class="mono" id="planoPct" style="font-size:24px;font-weight:700">—</div><div style="font-size:10px;color:var(--mut2);font-weight:700">COMPLIANT</div></div></div>
+     </div>
+    </div>
+    <div class="panel mt"><h3><span class="ico">🧑‍🔧</span> Auto-dispatch replenishment tasks</h3>
+     <div id="taskList"><div style="color:var(--mut2);font-size:12px;margin-top:10px">No open tasks — shelves healthy ✓</div></div>
+    </div>
+   </div>
+  </div>
+ </div>
+
+ <!-- QUEUE -->
+ <div class="tabpane" id="tab-queue">
+  <div class="panel"><h3><span class="ico">🧾</span> Checkout counters — live queue state <span class="rhs">predictor horizon: 5–10 min</span></h3>
+   <div id="queueBanner"><span>⚡</span><span id="qbText"></span><button id="qbBtn">Open counter now</button></div>
+   <div class="counters" id="counterGrid"></div>
+  </div>
+  <div class="grid2e mt">
+   <div class="panel"><h3><span class="ico">📉</span> Total queue length — last 2 min <span class="rhs">1s resolution, on-device</span></h3>
+    <div style="height:220px;margin-top:10px"><canvas id="queueChart"></canvas></div>
+   </div>
+   <div class="grid3" style="align-content:start">
+    <div class="kpi" style="--ac:var(--amber)"><div class="lab">Avg wait</div><div class="val" id="avgWaitVal">0:00</div><div class="sub">rolling 15 min</div></div>
+    <div class="kpi" style="--ac:var(--cyan)"><div class="lab">Avg service</div><div class="val" id="avgSvcVal">0s</div><div class="sub">per customer</div></div>
+    <div class="kpi" style="--ac:var(--green)"><div class="lab">Served today</div><div class="val" id="servedVal">0</div><div class="sub" id="abandVal">0 abandoned</div></div>
+   </div>
+  </div>
+ </div>
+
+ <!-- EDGE -->
+ <div class="tabpane" id="tab-edge">
+  <div class="panel"><h3><span class="ico">⚙</span> Edge fleet — this store <span class="rhs">Qualcomm QCS · Hexagon NPU · QNN runtime</span></h3>
+   <div style="margin-top:8px;overflow-x:auto">
+    <div class="devrow hd"><div>Node</div><div>Role / zone</div><div>FPS</div><div>Latency</div><div>NPU load</div><div>Temp</div><div>Status</div></div>
+    <div id="devRows"></div>
+   </div>
+  </div>
+  <div class="grid2e mt">
+   <div class="panel"><h3><span class="ico">🔒</span> Privacy-aware by architecture</h3>
+    <div class="badges">
+     <span class="badge">✓ No face recognition</span><span class="badge">✓ Video never leaves device</span>
+     <span class="badge">✓ Anonymous track IDs only</span><span class="badge">✓ On-chip face blur</span>
+     <span class="badge c">✓ Metadata-only uplink</span><span class="badge c">✓ DPDP Act aligned</span>
+     <span class="badge v">✓ On-device retention &lt; 24 h</span><span class="badge v">✓ Opt-out signage ready</span>
+    </div>
+    <p style="font-size:12px;color:var(--mut);margin-top:14px">Frames are processed in memory on the Hexagon NPU and discarded immediately. Only anonymous events — <span class="mono" style="color:var(--cyan)">{zone_enter, dwell_s, queue_len, sku_stock}</span> — are published to the store gateway over MQTT.</p>
+   </div>
+   <div class="panel"><h3><span class="ico">📡</span> Bandwidth &amp; autonomy <span class="rhs" id="syncStat">cloud sync: healthy</span></h3>
+    <div class="bigstats">
+     <div class="bstat"><div class="v" id="framesVal">0</div><div class="l">Frames processed on-device</div></div>
+     <div class="bstat"><div class="v" id="videoVal">0 GB</div><div class="l">Video kept local today</div></div>
+     <div class="bstat"><div class="v" id="cloudVal">0 MB</div><div class="l">Metadata sent to cloud</div></div>
+    </div>
+    <p style="font-size:12px;color:var(--mut);margin-top:12px">Toggle <b style="color:var(--amber)">“Simulate network outage”</b> in the header — every dashboard, alert and prediction keeps running. That is the edge-AI guarantee for Tier-2 / Tier-3 connectivity.</p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section id="arch">
+ <div class="sechead"><h2>Solution Architecture</h2><span>offline-first · hybrid sync · fleet-scale</span></div>
+ <div class="arch">
+  <div class="astep"><div class="n">01 · SENSE</div><h4>Camera &amp; Sensor Layer</h4>
+   <ul><li><b>Existing IP/CCTV cameras</b> — no rip &amp; replace</li><li>Shelf-facing cams for SKU vision</li><li>PoE, on-prem RTSP ingest</li><li>Optional POS weight / RFID fusion</li></ul></div>
+  <div class="arrow">➜</div>
+  <div class="astep" style="border-color:rgba(34,211,238,.4)"><div class="n">02 · INFER — ON DEVICE</div><h4>Edge AI Node <span style="color:var(--cyan)">· Qualcomm QCS6490 / QCS5430</span></h4>
+   <ul><li><b>Hexagon™ NPU</b> via Qualcomm AI Engine Direct (QNN)</li><li>Models compiled &amp; quantized <b>INT8 in Qualcomm AI Hub</b></li><li><b>YOLOv8n</b> person/SKU detection · <b>ByteTrack</b> anonymous tracking</li><li>Tripwire counting · dwell · heatmaps · planogram match</li><li>Queue forecaster (GBM on queue time-series)</li><li><b>30 FPS @ ~8 ms · &lt;10 W</b> · runs with zero internet</li></ul></div>
+  <div class="arrow">➜</div>
+  <div class="astep"><div class="n">03 · ACT — IN STORE</div><h4>Store Edge Gateway</h4>
+   <ul><li>MQTT event bus · local time-series DB</li><li>This dashboard served on LAN</li><li>Staff alerts: PA / app / handheld</li><li><b>POS · inventory · ERP connectors</b></li><li>Auto-dispatch replenishment tasks</li></ul></div>
+  <div class="arrow">➜</div>
+  <div class="astep"><div class="n">04 · SYNC — OPTIONAL</div><h4>Cloud Control Plane</h4>
+   <ul><li>Multi-store federation &amp; benchmarking</li><li><b>Fleet OTA</b> model updates (AI Hub)</li><li>Metadata-only uplink (~15 MB/day)</li><li>Store operates 100% without it</li></ul></div>
+ </div>
+</section>
+
+<!-- ============ PILLARS ============ -->
+<section id="pillarsSec">
+ <div class="sechead"><h2>Capability Pillars</h2><span>mapped 1:1 to the problem statement</span></div>
+ <div class="pillars">
+  <div class="pil"><div class="ic">🚶</div><h4>Shopper Analytics</h4><p>Entry/exit counting, footfall trends by hour &amp; zone, dwell time at displays, live movement heatmaps — all from anonymous tracks.</p></div>
+  <div class="pil"><div class="ic">📦</div><h4>Inventory Monitoring</h4><p>Shelf-facing cameras detect low/out-of-stock and planogram drift, then auto-dispatch replenishment tasks to staff handhelds.</p></div>
+  <div class="pil"><div class="ic">🧾</div><h4>Queue Intelligence</h4><p>Per-counter queue length, wait &amp; service times, and a forecaster that recommends opening counters <b>before</b> congestion hits.</p></div>
+  <div class="pil"><div class="ic">⚡</div><h4>Edge AI Processing</h4><p>All vision runs on Hexagon NPUs at &lt;10 ms/frame. Stores keep operating through internet outages — critical for Tier-2/3 India.</p></div>
+  <div class="pil"><div class="ic">🔒</div><h4>Privacy-Aware</h4><p>No face recognition, no stored video, on-chip blurring. Only anonymous metadata events ever leave the device. DPDP-aligned.</p></div>
+  <div class="pil"><div class="ic">📊</div><h4>Operations Dashboard</h4><p>Real-time alerts, daily/weekly reports, KPIs for footfall, conversion proxy, shelf health and staff efficiency.</p></div>
+  <div class="pil"><div class="ic">🌐</div><h4>Scalable Deployment</h4><p>From a kirana with 2 cameras to chains with 500 stores — POS/ERP integration and centralized multi-store monitoring built in.</p></div>
+  <div class="pil"><div class="ic">💰</div><h4>Unit Economics</h4><p>~99.9% less uplink bandwidth, no per-frame cloud GPU cost, sub-10W hardware — payback from reduced stock-outs alone.</p></div>
+ </div>
+</section>
+
+<!-- ============ IMPACT ============ -->
+<section id="impactSec">
+ <div class="sechead"><h2>Projected Impact</h2><span>pilot targets · 12-week rollout</span></div>
+ <div class="impact">
+  <div class="imp"><div class="v">−38%</div><div class="l">Stock-outs via &lt;60 s shelf alerts &amp; auto-dispatch</div></div>
+  <div class="imp"><div class="v">−27%</div><div class="l">Queue abandonment with predictive counter opening</div></div>
+  <div class="imp"><div class="v">+12%</div><div class="l">Conversion via dwell-optimized layouts &amp; staffing</div></div>
+  <div class="imp"><div class="v">−99.9%</div><div class="l">Cloud bandwidth vs cloud-video analytics</div></div>
+ </div>
+ <p class="note" style="text-align:center">* Simulated demo data for visualization. Impact figures are pilot targets for a 6-store grocery format pilot.</p>
+</section>
+
+</main>
+
+<footer>
+ <div class="wrap"><b>RetailEdge AI</b> · On-device retail intelligence on Qualcomm® Hexagon™ NPU · Built for the Qualcomm Edge AI challenge<br>
+ <span style="font-size:11px">YOLOv8n INT8 · ByteTrack · QNN / AI Hub · MQTT · TimescaleDB · All inference on-device · No PII stored</span></div>
+</footer>
+
+<script>
+/* ================= utils ================= */
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const R=(a,b)=>a+Math.random()*(b-a), RI=(a,b)=>Math.floor(R(a,b+1));
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const fmt=n=>Math.round(n).toLocaleString('en-IN');
+const mmss=s=>{s=Math.max(0,s);return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0')};
+const istNow=()=>new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+const tstr=()=>istNow().toLocaleTimeString('en-IN',{hour12:false});
+
+/* ================= state ================= */
+const S={footfall:0,inStore:0,exits:0,dwellTotal:0,dwellCount:0,frames:1845200,videoGB:34.2,cloudMB:11.4,bufferMB:0,offline:false,aband:0,servedBase:612};
+
+const ZONES=[
+ {id:'produce',name:'Produce',x:40,y:60,w:260,h:180,col:'#34d399',visitors:0,dwell:0},
+ {id:'dairy',name:'Dairy',x:340,y:60,w:260,h:180,col:'#60a5fa',visitors:0,dwell:0},
+ {id:'snacks',name:'Snacks & Beverages',x:640,y:60,w:320,h:120,col:'#fbbf24',visitors:0,dwell:0},
+ {id:'promo',name:'Promo Display',x:40,y:280,w:260,h:140,col:'#f472b6',visitors:0,dwell:0},
+ {id:'care',name:'Personal Care',x:340,y:280,w:260,h:140,col:'#a78bfa',visitors:0,dwell:0},
+ {id:'elec',name:'Electronics',x:640,y:220,w:320,h:140,col:'#22d3ee',visitors:0,dwell:0},
+ {id:'checkout',name:'Checkout',x:360,y:470,w:600,h:120,col:'#f87171',visitors:0,dwell:0},
+ {id:'entrance',name:'Entrance',x:20,y:470,w:180,h:120,col:'#94a3b8',visitors:0,dwell:0}
+];
+const DOOR={x:110,y:600};
+const inZone=(p,z)=>p.x>z.x&&p.x<z.x+z.w&&p.y>z.y&&p.y<z.y+z.h;
+
+/* ================= people sim ================= */
+let people=[],pid=1000;
+function popTarget(){const h=istNow().getHours();let b=18;if(h>=11&&h<14)b=34;else if(h>=17&&h<=20)b=42;else if(h>=21||h<9)b=10;return b+RI(-3,3);}
+function targetIn(z){return{x:R(z.x+20,z.x+z.w-20),y:R(z.y+20,z.y+z.h-20)}}
+function spawn(countIt=true){
+ const e=ZONES[7];
+ const p={id:++pid,x:R(e.x+25,e.x+e.w-25),y:e.y+e.h-8,tx:0,ty:0,speed:R(30,60),wait:0,conf:R(.90,.99).toFixed(2),cur:'entrance',leaving:false};
+ pickTarget(p);people.push(p);
+ if(countIt){S.footfall++;S.inStore++;e.visitors++;S.dwellCount++;const hi=clamp(istNow().getHours(),9,21)-9;footData[hi]=(footData[hi]||0)+1;}
+}
+function pickTarget(p){const z=ZONES[RI(0,6)];const t=targetIn(z);p.tx=t.x;p.ty=t.y;}
+function stepPeople(dt){
+ const tgt=popTarget();
+ if(people.length<tgt&&Math.random()<dt*1.6)spawn(true);
+ for(let i=people.length-1;i>=0;i--){
+  const p=people[i];
+  if(p.wait>0){p.wait-=dt;}
+  else{
+   const dx=p.tx-p.x,dy=p.ty-p.y,d=Math.hypot(dx,dy);
+   if(d<6){
+    if(p.leaving){people.splice(i,1);S.exits++;S.inStore--;continue;}
+    p.wait=R(3,16);
+    if(Math.random()<0.14||(people.length>tgt+6&&Math.random()<0.4)){p.leaving=true;p.tx=DOOR.x;p.ty=DOOR.y;p.speed=R(45,70);}
+    else pickTarget(p);
+   }else{p.x+=dx/d*p.speed*dt;p.y+=dy/d*p.speed*dt;}
+  }
+  // dwell accumulation
+  let cz=null;for(const z of ZONES)if(inZone(p,z)){cz=z;break;}
+  if(cz){cz.dwell+=dt;S.dwellTotal+=dt;
+   if(p.cur!==cz.id){cz.visitors++;S.dwellCount++;p.cur=cz.id;}}
+ }
+}
+
+/* ================= floor plan drawing ================= */
+function drawPlan(ctx,dark){
+ ctx.fillStyle=dark?'#070b13':'#080d17';ctx.fillRect(0,0,1000,620);
+ for(const z of ZONES){
+  ctx.fillStyle=z.col+(dark?'0d':'14');ctx.fillRect(z.x,z.y,z.w,z.h);
+  ctx.strokeStyle=z.col+'55';ctx.lineWidth=1.5;ctx.strokeRect(z.x,z.y,z.w,z.h);
+  ctx.fillStyle=z.col;ctx.font='700 13px Inter';ctx.fillText(z.name.toUpperCase(),z.x+10,z.y+20);
+ }
+ // door
+ ctx.fillStyle='#22d3ee';ctx.fillRect(70,606,80,5);
+ ctx.fillStyle='#8ea2c4';ctx.font='600 10px Inter';ctx.fillText('ENTRY / EXIT',66,616);
+ // checkout counters
+ for(let i=0;i<4;i++){const cx=420+i*140;
+  ctx.fillStyle=counters[i].open?'rgba(52,211,153,.25)':'rgba(90,110,140,.15)';
+  ctx.fillRect(cx,520,90,44);
+  ctx.strokeStyle=counters[i].open?'#34d39988':'#3a4a6a';ctx.strokeRect(cx,520,90,44);
+  ctx.fillStyle=counters[i].open?'#34d399':'#5b6c8c';ctx.font='700 10px Inter';
+  ctx.fillText('C'+(i+1)+(counters[i].open?'':' · CLOSED'),cx+8,542);
+ }
+}
+
+/* ================= heatmap ================= */
+const heatC=$('#heatCanvas'),hctx=heatC.getContext('2d');
+const heatLow=document.createElement('canvas');heatLow.width=250;heatLow.height=155;
+const hl=heatLow.getContext('2d');
+const heatCol=document.createElement('canvas');heatCol.width=250;heatCol.height=155;
+const hc=heatCol.getContext('2d');
+const STOPS=[[0,0,0,0,0],[0.10,29,78,216,70],[0.28,34,211,238,120],[0.48,52,211,153,150],[0.68,251,191,36,180],[0.86,248,113,113,215],[1,239,68,68,255]];
+function mapHeat(v){const t=v/255;if(t<=0)return[0,0,0,0];
+ for(let i=1;i<STOPS.length;i++){if(t<=STOPS[i][0]){const a=STOPS[i-1],b=STOPS[i],f=(t-a[0])/(b[0]-a[0]||1);
+  return[a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f,a[3]+(b[3]-a[3])*f,a[4]+(b[4]-a[4])*f];}}
+ return[239,68,68,255];}
+function drawHeat(){
+ // accumulate
+ hl.globalCompositeOperation='destination-out';hl.fillStyle='rgba(0,0,0,0.016)';hl.fillRect(0,0,250,155);
+ hl.globalCompositeOperation='lighter';
+ for(const p of people){const g=hl.createRadialGradient(p.x*.25,p.y*.25,0,p.x*.25,p.y*.25,7);
+  g.addColorStop(0,'rgba(255,255,255,0.10)');g.addColorStop(1,'rgba(255,255,255,0)');
+  hl.fillStyle=g;hl.beginPath();hl.arc(p.x*.25,p.y*.25,7,0,7);hl.fill();}
+ // colorize
+ const img=hl.getImageData(0,0,250,155),out=hc.createImageData(250,155);
+ for(let i=0;i<img.data.length;i+=4){const c=mapHeat(img.data[i+3]);out.data[i]=c[0];out.data[i+1]=c[1];out.data[i+2]=c[2];out.data[i+3]=c[3];}
+ hc.putImageData(out,0,0);
+ // compose
+ drawPlan(hctx,false);
+ hctx.imageSmoothingEnabled=true;hctx.drawImage(heatCol,0,0,1000,620);
+ for(const p of people){hctx.fillStyle='rgba(231,238,251,.85)';hctx.beginPath();hctx.arc(p.x,p.y,2.4,0,7);hctx.fill();}
+}
+
+/* ================= vision feed ================= */
+const visC=$('#visionCanvas'),vctx=visC.getContext('2d');
+function drawVision(){
+ vctx.fillStyle='#05080e';vctx.fillRect(0,0,1000,620);
+ vctx.strokeStyle='rgba(34,211,238,.05)';vctx.lineWidth=1;
+ for(let x=0;x<1000;x+=40){vctx.beginPath();vctx.moveTo(x,0);vctx.lineTo(x,620);vctx.stroke();}
+ for(let y=0;y<620;y+=40){vctx.beginPath();vctx.moveTo(0,y);vctx.lineTo(1000,y);vctx.stroke();}
+ // shelves
+ for(const z of ZONES){if(z.id==='entrance'||z.id==='checkout')continue;
+  vctx.fillStyle='rgba(20,32,54,.9)';vctx.fillRect(z.x,z.y,z.w,z.h);
+  vctx.strokeStyle='rgba(96,125,180,.35)';vctx.strokeRect(z.x,z.y,z.w,z.h);
+  vctx.fillStyle='rgba(142,162,196,.7)';vctx.font='600 11px JetBrains Mono';vctx.fillText(z.name.toUpperCase(),z.x+10,z.y+18);}
+ // checkout zone
+ vctx.strokeStyle='rgba(248,113,113,.4)';vctx.setLineDash([6,5]);vctx.strokeRect(360,470,600,120);vctx.setLineDash([]);
+ vctx.fillStyle='rgba(248,113,113,.8)';vctx.font='600 11px JetBrains Mono';vctx.fillText('CHECKOUT ROI',370,488);
+ // tripwire
+ vctx.strokeStyle='#f87171';vctx.lineWidth=2;vctx.setLineDash([8,6]);
+ vctx.beginPath();vctx.moveTo(210,470);vctx.lineTo(210,596);vctx.stroke();vctx.setLineDash([]);vctx.lineWidth=1;
+ vctx.fillStyle='#f87171';vctx.font='700 11px JetBrains Mono';
+ vctx.fillText('IN '+fmt(S.footfall)+' / OUT '+fmt(S.exits),218,500);
+ // people boxes
+ for(const p of people){
+  const w=30,h=44,x=p.x-w/2,y=p.y-h/2;
+  vctx.fillStyle='rgba(34,211,238,.08)';vctx.fillRect(x,y,w,h);
+  vctx.strokeStyle='rgba(34,211,238,.9)';vctx.lineWidth=1.4;
+  const c=7;vctx.beginPath();
+  vctx.moveTo(x,y+c);vctx.lineTo(x,y);vctx.lineTo(x+c,y);
+  vctx.moveTo(x+w-c,y);vctx.lineTo(x+w,y);vctx.lineTo(x+w,y+c);
+  vctx.moveTo(x+w,y+h-c);vctx.lineTo(x+w,y+h);vctx.lineTo(x+w-c,y+h);
+  vctx.moveTo(x+c,y+h);vctx.lineTo(x,y+h);vctx.lineTo(x,y+h-c);vctx.stroke();vctx.lineWidth=1;
+  vctx.fillStyle='rgba(34,211,238,.9)';vctx.beginPath();vctx.arc(p.x,y+7,3.4,0,7);vctx.fill();
+  const label='P-'+p.id+' '+p.conf;
+  vctx.font='600 9.5px JetBrains Mono';const tw=vctx.measureText(label).width;
+  vctx.fillStyle='rgba(5,10,18,.85)';vctx.fillRect(x-2,y-15,tw+8,12);
+  vctx.fillStyle='#22d3ee';vctx.fillText(label,x+2,y-6);
+ }
+ // HUD
+ vctx.fillStyle='rgba(5,10,18,.8)';vctx.fillRect(0,0,1000,30);
+ vctx.fillStyle='#f87171';vctx.beginPath();vctx.arc(16,15,5,0,7);vctx.fill();
+ vctx.fillStyle='#e7eefb';vctx.font='700 11.5px JetBrains Mono';
+ vctx.fillText('LIVE  CAM-02 · SALES FLOOR',30,19);
+ const d=DEVS[1];
+ vctx.fillStyle='#34d399';vctx.fillText(d.fps+' FPS · '+d.lat.toFixed(1)+' ms · HTP INT8',790,19);
+ vctx.fillStyle='rgba(5,10,18,.8)';vctx.fillRect(0,592,1000,28);
+ vctx.fillStyle='#8ea2c4';vctx.font='600 11px JetBrains Mono';
+ vctx.fillText(tstr()+' IST',12,610);
+ vctx.fillStyle='#34d399';vctx.fillText('🔒 ANONYMIZED ON-CHIP · NO VIDEO STORED · QCS6490',600,610);
+}
+
+/* ================= inventory ================= */
+const SKUS=[
+ {name:'Atta 5kg',shelf:'A1',stock:82},{name:'Basmati Rice 1kg',shelf:'A1',stock:64},
+ {name:'Toor Dal 1kg',shelf:'A2',stock:41},{name:'Sunflower Oil 1L',shelf:'A2',stock:23},
+ {name:'Milk 500ml',shelf:'B1',stock:57},{name:'Curd 400g',shelf:'B1',stock:12},
+ {name:'Brown Bread',shelf:'B2',stock:88},{name:'Glucose Biscuits',shelf:'B2',stock:34},
+ {name:'Tea 250g',shelf:'C1',stock:71},{name:'Sugar 1kg',shelf:'C1',stock:9},
+ {name:'Shampoo 180ml',shelf:'D1',stock:66},{name:'Soap 4-pack',shelf:'D1',stock:49}
+].map(s=>({...s,plano:true,flagLow:s.stock<40,flagCrit:s.stock<15,task:null,planoT:0}));
+let tasks=[];
+function skuStatus(s){return s.stock<15?'crit':(s.stock<40?'low':'ok');}
+function tickInventory(){
+ for(const s of SKUS){
+  s.stock=clamp(s.stock-R(0,0.30),0,100);
+  const st=skuStatus(s);
+  if(st==='crit'&&!s.flagCrit){s.flagCrit=true;s.flagLow=true;
+   pushAlert('red','Stock-out risk · '+s.name,'Shelf '+s.shelf+' at '+Math.round(s.stock)+'% — replenishment task auto-dispatched.');
+   const t={sku:s,eta:RI(25,75)};s.task=t;tasks.push(t);}
+  else if(st==='low'&&!s.flagLow){s.flagLow=true;pushAlert('amber','Low stock · '+s.name,'Shelf '+s.shelf+' below 40% — monitor scheduled.');}
+  if(Math.random()<0.002&&s.plano){s.plano=false;s.planoT=RI(40,90);
+   pushAlert('violet','Planogram drift · Shelf '+s.shelf,s.name+' misplaced vs planogram — staff notified.');}
+  if(!s.plano){s.planoT--;if(s.planoT<=0){s.plano=true;pushAlert('green','Planogram restored · Shelf '+s.shelf,s.name+' placement verified compliant by shelf cam.');}}
+ }
+ for(let i=tasks.length-1;i>=0;i--){const t=tasks[i];t.eta--;
+  if(t.eta<=0){t.sku.stock=R(85,100);t.sku.flagCrit=false;t.sku.flagLow=false;t.sku.task=null;tasks.splice(i,1);
+   pushAlert('green','Replenished · '+t.sku.name,'Shelf '+t.sku.shelf+' restocked to '+Math.round(t.sku.stock)+'% — verified by shelf cam.');}}
+}
+function renderInventory(){
+ $('#shelfGrid').innerHTML=SKUS.map(s=>{
+  const st=skuStatus(s),col=st==='ok'?'var(--green)':st==='low'?'var(--amber)':'var(--red)';
+  return `<div class="sku"><div class="nm"><span>${s.name}</span><span class="sh">${s.shelf}</span></div>
+   <div class="skbar"><i style="width:${s.stock}%;background:${col}"></i></div>
+   <div class="meta"><span class="mono">${Math.round(s.stock)}%</span>
+   <span class="plano ${s.plano?'y':'n'}">${s.plano?'▣ plano ✓':'▣ drift!'}</span>
+   <span class="st ${st}">${st==='ok'?'IN STOCK':st==='low'?'LOW':'CRITICAL'}</span></div></div>`;}).join('');
+ $('#taskList').innerHTML=tasks.length?tasks.map(t=>`<div class="task">🧑‍🔧 Restock <b>&nbsp;${t.sku.name}&nbsp;</b> → Shelf ${t.sku.shelf}<span class="eta">ETA ${t.eta}s</span></div>`).join(''):'<div style="color:var(--mut2);font-size:12px;margin-top:10px">No open tasks — shelves healthy ✓</div>';
+ const comp=SKUS.filter(s=>s.plano).length/SKUS.length*100;
+ $('#planoPct').textContent=Math.round(comp)+'%';
+ if(charts.plano){charts.plano.data.datasets[0].data=[comp,100-comp];charts.plano.update('none');}
+ $('#kStock').textContent=SKUS.filter(s=>s.stock<15).length;
+}
+
+/* ================= queue ================= */
+const counters=[{id:1,open:true,q:3,svc:40,served:212,avgSvc:82},{id:2,open:true,q:2,svc:25,served:198,avgSvc:95},{id:3,open:false,q:0,svc:0,served:121,avgSvc:88},{id:4,open:false,q:0,svc:0,served:81,avgSvc:90}];
+let bannerSince=0,bannerCounter=null;
+const queueHist=Array.from({length:90},()=>RI(2,7));
+function tickQueue(){
+ const open=counters.filter(c=>c.open);
+ if(Math.random()<0.10+S.inStore/650){const c=open.reduce((a,b)=>a.q<=b.q?a:b);c.q++;}
+ for(const c of open){if(c.q>0){c.svc--;if(c.svc<=0){c.q--;c.served++;const st=R(55,140);c.avgSvc=c.avgSvc*0.9+st*0.1;c.svc=st;}}}
+ // abandonment
+ const tq=counters.reduce((a,c)=>a+c.q,0);
+ if(tq>13&&Math.random()<0.06){S.aband++;const c=open.reduce((a,b)=>a.q>=b.q?a:b);if(c.q>0)c.q--;pushAlert('amber','Queue abandonment detected','Shopper left checkout line — predicted wait exceeded patience threshold.');}
+ queueHist.push(tq);if(queueHist.length>120)queueHist.shift();
+ // prediction & recommendation
+ const worst=open.length?Math.max(...open.map(c=>c.q*c.avgSvc)):0;
+ const closed=counters.find(c=>!c.open);
+ if(worst>210&&closed){
+  if(!bannerSince){bannerSince=Date.now();bannerCounter=closed;
+   $('#qbText').textContent='Predicted congestion: wait ≈ '+(worst/60).toFixed(1)+' min within 5 min. Recommendation: open Counter '+closed.id+'.';
+   $('#qbBtn').textContent='Open Counter '+closed.id;
+   $('#queueBanner').classList.add('show');
+   pushAlert('red','Queue congestion forecast','Predicted wait '+(worst/60).toFixed(1)+' min — recommend opening Counter '+closed.id+'.');}
+  if(Date.now()-bannerSince>26000)openCounter();
+ }else if(worst<=150){bannerSince=0;bannerCounter=null;$('#queueBanner').classList.remove('show');}
+ // auto-close idle counter
+ const idle=open.filter(c=>c.q===0);
+ if(open.length>2&&idle.length&&Math.random()<0.02){const c=idle[0];c.open=false;pushAlert('cyan','Counter '+c.id+' closed','Queue drained — staff reassigned to replenishment.');}
+}
+function openCounter(){if(!bannerCounter)return;bannerCounter.open=true;bannerCounter.svc=20;
+ pushAlert('green','Counter '+bannerCounter.id+' opened','Staff dispatched — predicted wait collapsing. Actioned from dashboard.');
+ bannerSince=0;bannerCounter=null;$('#queueBanner').classList.remove('show');}
+$('#qbBtn').onclick=openCounter;
+function renderQueue(){
+ $('#counterGrid').innerHTML=counters.map(c=>{
+  const wait=c.q*c.avgSvc;
+  const ppl=Array.from({length:Math.min(c.q,8)},()=>'<span class="qp"></span>').join('')+(c.q>8?`<span class="qp more">+${c.q-8}</span>`:'');
+  return `<div class="counter ${c.open?'':'closed'}"><div class="hd"><span>Counter ${c.id}</span><span class="st ${c.open?'ok':'crit'}">${c.open?'OPEN':'CLOSED'}</span></div>
+   <div class="qppl">${c.open?(ppl||'<span style="color:var(--mut2);font-size:11px">no queue</span>'):'<span style="color:var(--mut2);font-size:11px">—</span>'}</div>
+   <div class="row"><span>Queue</span><b>${c.q}</b></div>
+   <div class="row"><span>Pred. wait</span><b style="color:${wait>210?'var(--red)':wait>120?'var(--amber)':'var(--green)'}">${mmss(wait)}</b></div>
+   <div class="row"><span>Avg service</span><b>${Math.round(c.avgSvc)}s</b></div>
+   <div class="row"><span>Served</span><b>${c.served}</b></div></div>`;}).join('');
+ const open=counters.filter(c=>c.open);
+ const avgWait=open.length?open.reduce((a,c)=>a+c.q*c.avgSvc,0)/open.length/2:0;
+ const avgSvc=open.length?open.reduce((a,c)=>a+c.avgSvc,0)/open.length:0;
+ $('#kWait').textContent=mmss(avgWait);$('#avgWaitVal').textContent=mmss(avgWait);
+ $('#avgSvcVal').textContent=Math.round(avgSvc)+'s';
+ const served=counters.reduce((a,c)=>a+c.served,0);
+ $('#servedVal').textContent=fmt(served);$('#abandVal').textContent=S.aband+' abandoned';
+ if(charts.queue){charts.queue.data.labels=queueHist.map((_,i)=>i);charts.queue.data.datasets[0].data=queueHist;charts.queue.update('none');}
+}
+
+/* ================= devices ================= */
+const DEVS=[
+ {id:'CAM-01',role:'Entrance · footfall tripwire',fps:30,lat:7.2,npu:38,temp:46},
+ {id:'CAM-02',role:'Sales floor · tracking & heatmap',fps:30,lat:8.4,npu:52,temp:51},
+ {id:'CAM-03',role:'Shelves A/B · SKU vision',fps:15,lat:11.2,npu:44,temp:49},
+ {id:'CAM-04',role:'Shelves C/D · SKU vision',fps:15,lat:10.6,npu:41,temp:48},
+ {id:'CAM-05',role:'Checkout · queue forecaster',fps:30,lat:7.8,npu:47,temp:52},
+ {id:'GW-01',role:'Edge gateway · MQTT · POS join',fps:0,lat:2.1,npu:18,temp:44}
+];
+function tickDevices(){for(const d of DEVS){d.lat=clamp(d.lat+R(-.5,.5),1.5,13);d.npu=clamp(d.npu+RI(-4,4),12,84);d.temp=clamp(d.temp+R(-.4,.4),40,61);if(d.fps)d.fps=Math.random()<.9?30:29;}}
+function renderDevices(){
+ $('#devRows').innerHTML=DEVS.map(d=>`<div class="devrow"><div class="mono" style="color:var(--cyan);font-weight:700">${d.id}</div>
+  <div style="color:var(--mut)">${d.role}</div><div class="mono">${d.fps||'—'}</div>
+  <div class="mono" style="color:${d.lat<10?'var(--green)':'var(--amber)'}">${d.lat.toFixed(1)} ms</div>
+  <div class="npubar"><i style="width:${d.npu}%"></i></div>
+  <div class="mono">${d.temp.toFixed(0)}°C</div><div class="on">● ONLINE</div></div>`).join('');
+ $('#kLat').textContent=(DEVS.slice(0,5).reduce((a,d)=>a+d.lat,0)/5).toFixed(1)+' ms';
+ $('#hudFps').textContent='30 FPS · HTP';
+}
+
+/* ================= alerts ================= */
+const SEV={red:'var(--red)',amber:'var(--amber)',green:'var(--green)',cyan:'var(--cyan)',violet:'var(--violet)'};
+const ICO={red:'🔴',amber:'🟠',green:'🟢',cyan:'🔵',violet:'🟣'};
+function pushAlert(sev,title,msg){
+ const el=document.createElement('div');el.className='al';el.style.setProperty('--ac',SEV[sev]);
+ el.innerHTML=`<div class="t">${tstr()}</div><div><b>${ICO[sev]} ${title}</b><span>${msg}</span></div>`;
+ const feed=$('#alertFeed');feed.prepend(el);
+ while(feed.children.length>28)feed.lastChild.remove();
+}
+
+/* ================= charts ================= */
+const charts={};
+const HOURS=[9,10,11,12,13,14,15,16,17,18,19,20,21];
+const HLBL=['9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM'];
+const BASE=[64,82,101,124,149,171,154,136,131,147,173,191,120];
+const hNow=clamp(istNow().getHours(),9,21);
+const footData=BASE.map((v,i)=>HOURS[i]<hNow?v:(HOURS[i]===hNow?Math.round(v*R(.3,.5)):null));
+S.footfall=footData.reduce((a,v)=>a+(v||0),0);
+function initCharts(){
+ if(!window.Chart)return;
+ Chart.defaults.color='#8ea2c4';Chart.defaults.borderColor='rgba(142,162,196,.10)';
+ Chart.defaults.font.family='Inter';Chart.defaults.font.size=11;
+ charts.foot=new Chart($('#footChart'),{type:'line',data:{labels:HLBL,datasets:[{label:'Entries',data:footData,borderColor:'#22d3ee',borderWidth:2,pointRadius:2,tension:.35,fill:true,
+  backgroundColor:c=>{const g=c.chart.ctx.createLinearGradient(0,0,0,240);g.addColorStop(0,'rgba(34,211,238,.30)');g.addColorStop(1,'rgba(34,211,238,0)');return g;}}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+ charts.dwell=new Chart($('#dwellChart'),{type:'bar',data:{labels:ZONES.slice(0,7).map(z=>z.name),datasets:[{data:ZONES.slice(0,7).map(z=>z.dwell/Math.max(1,z.visitors)/60),
+  backgroundColor:ZONES.slice(0,7).map(z=>z.col+'99'),borderColor:ZONES.slice(0,7).map(z=>z.col),borderWidth:1,borderRadius:6}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.parsed.x.toFixed(1)+' min'}}},scales:{x:{title:{display:true,text:'minutes',color:'#5b6c8c'}}}}});
+ charts.queue=new Chart($('#queueChart'),{type:'line',data:{labels:queueHist.map((_,i)=>i),datasets:[{data:queueHist,borderColor:'#fbbf24',borderWidth:2,pointRadius:0,tension:.3,fill:true,
+  backgroundColor:c=>{const g=c.chart.ctx.createLinearGradient(0,0,0,220);g.addColorStop(0,'rgba(251,191,36,.28)');g.addColorStop(1,'rgba(251,191,36,0)');return g;}}]},
+  options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{beginAtZero:true,title:{display:true,text:'people in queue',color:'#5b6c8c'}}}}});
+ charts.plano=new Chart($('#planoChart'),{type:'doughnut',data:{labels:['Compliant','Drift'],datasets:[{data:[100,0],backgroundColor:['#34d399','#f87171'],borderWidth:0,cutout:'74%'}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+}
+
+/* ================= zone table / shopper ================= */
+function renderShopper(){
+ $('#entriesVal').textContent=fmt(S.footfall);
+ $('#exitsVal').textContent=fmt(S.exits);
+ const served=counters.reduce((a,c)=>a+c.served,0);
+ $('#convVal').textContent=(served/Math.max(1,S.footfall)*100).toFixed(1)+'%';
+ const tot=ZONES.reduce((a,z)=>a+z.visitors,0)||1;
+ $('#zoneRows').innerHTML=ZONES.slice(0,7).map(z=>{const avg=z.dwell/Math.max(1,z.visitors)/60;const sh=z.visitors/tot*100;
+  return `<tr style="border-top:1px solid var(--line)"><td style="padding:7px 8px"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${z.col};margin-right:7px"></i>${z.name}</td>
+  <td align="right" class="mono" style="padding:7px 8px">${fmt(z.visitors)}</td>
+  <td align="right" class="mono" style="padding:7px 8px">${avg.toFixed(1)}m</td>
+  <td style="padding:7px 8px"><div style="height:6px;background:#0a1220;border-radius:99px;border:1px solid var(--line)"><div style="height:100%;width:${sh}%;background:${z.col};border-radius:99px"></div></div></td></tr>`;}).join('');
+ if(charts.dwell){charts.dwell.data.datasets[0].data=ZONES.slice(0,7).map(z=>z.dwell/Math.max(1,z.visitors)/60);charts.dwell.update('none');}
+}
+
+/* ================= KPIs / bandwidth ================= */
+function renderKPIs(){
+ $('#kFoot').textContent=fmt(S.footfall);
+ $('#kStore').textContent=S.inStore;
+ $('#kDwell').textContent=mmss(S.dwellTotal/Math.max(1,S.dwellCount));
+ $('#framesVal').textContent=(S.frames/1e6).toFixed(2)+'M';
+ $('#videoVal').textContent=S.videoGB.toFixed(1)+' GB';
+ $('#cloudVal').textContent=S.offline?S.cloudMB.toFixed(1)+' MB (+'+S.bufferMB.toFixed(1)+' buffered)':S.cloudMB.toFixed(1)+' MB';
+}
+
+/* ================= main loops ================= */
+function tick(){ // 1s logic
+ tickInventory();tickQueue();tickDevices();
+ S.frames+=DEVS.reduce((a,d)=>a+d.fps,0);
+ S.videoGB+=0.003;
+ if(S.offline)S.bufferMB+=R(.001,.004);else S.cloudMB+=R(.001,.004);
+ renderInventory();renderQueue();renderDevices();renderKPIs();
+}
+let slow=0;
+function slowTick(){ // 3s
+ renderShopper();
+ if(charts.foot){charts.foot.data.datasets[0].data=footData;charts.foot.update('none');}
+ $('#clock').textContent=tstr()+' IST';
+}
+let last=performance.now();
+function frame(now){
+ const dt=clamp((now-last)/1000,0,.05);last=now;
+ stepPeople(dt);drawHeat();drawVision();
+ requestAnimationFrame(frame);
+}
+
+/* ================= tabs / toggle ================= */
+$$('.tabbtn').forEach(b=>b.onclick=()=>{
+ $$('.tabbtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+ $$('.tabpane').forEach(p=>p.classList.remove('active'));
+ $('#tab-'+b.dataset.tab).classList.add('active');
+});
+$('#offlineToggle').onchange=e=>{
+ S.offline=e.target.checked;document.body.classList.toggle('offline',S.offline);
+ const p=$('#edgePill');p.classList.toggle('edge',!S.offline);p.classList.toggle('off',S.offline);
+ $('#edgePillTxt').textContent=S.offline?'EDGE AUTONOMY · OFFLINE':'EDGE MODE · CLOUD SYNCED';
+ $('#syncStat').textContent=S.offline?'cloud sync: OFFLINE — buffering locally':'cloud sync: healthy';
+ if(S.offline){S.bufferMB=0;pushAlert('amber','Connectivity lost — edge autonomy active','All 6 nodes continue full inference on-device. Events buffered for later sync.');}
+ else pushAlert('green','Connectivity restored','Buffered metadata ('+S.bufferMB.toFixed(1)+' MB) synced. Zero data loss during outage.');
+};
+
+/* ================= init ================= */
+// seed people
+const seedN=popTarget();
+for(let i=0;i<seedN;i++){const e=ZONES[7];const p={id:++pid,x:R(60,940),y:R(80,580),tx:0,ty:0,speed:R(30,60),wait:R(0,6),conf:R(.90,.99).toFixed(2),cur:null,leaving:false};pickTarget(p);people.push(p);}
+S.inStore=people.length;
+// seed zone stats
+for(const z of ZONES){z.visitors=RI(60,260);z.dwell=z.visitors*R(50,240);}
+S.dwellCount=ZONES.reduce((a,z)=>a+z.visitors,0);S.dwellTotal=ZONES.reduce((a,z)=>a+z.dwell,0);
+S.exits=Math.round(S.footfall*0.82);
+initCharts();
+pushAlert('cyan','System online','6 edge nodes healthy · QNN runtime · models: yolov8n-int8, bytetrack, sku-det-v3, queue-fc-v2.');
+pushAlert('green','Planogram verified','Morning compliance scan complete — 12/12 SKUs compliant.');
+pushAlert('amber','Low stock · Sugar 1kg','Shelf C1 below 40% — monitor scheduled.');
+renderInventory();renderQueue();renderDevices();renderKPIs();renderShopper();slowTick();
+setInterval(tick,1000);setInterval(slowTick,3000);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
